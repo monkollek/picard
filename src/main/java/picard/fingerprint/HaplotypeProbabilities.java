@@ -109,13 +109,17 @@ public abstract class HaplotypeProbabilities {
      */
     public int getTotalObs() { return 0; }
 
-    /** Returns true if evidence has been added, false if the probabilities are just the priors. */
+    /**
+     * Returns true if evidence has been added, false if the probabilities are just the priors.
+     */
     public boolean hasEvidence() {
         return true;
     }
 
-	/** Merges in the likelihood information from the supplied haplotype probabilities object. */
-	public abstract void merge(final HaplotypeProbabilities other);
+    /**
+     * Merges in the likelihood information from the supplied haplotype probabilities object.
+     */
+    public abstract void merge(final HaplotypeProbabilities other);
 
     /**
      * Returns the index of the highest probability which can then be used to look up
@@ -140,9 +144,12 @@ public abstract class HaplotypeProbabilities {
         return snp.getGenotype(getMostLikelyHaplotype());
     }
 
-    /** Throws an exception if the passed SNP is not part of this haplotype. */
+    /**
+     * Throws an exception if the passed SNP is not part of this haplotype.
+     */
     void assertSnpPartOfHaplotype(final Snp snp) {
-        if (!this.haplotypeBlock.getSnps().contains(snp)) {
+        if (!this.haplotypeBlock.getSnps().contains(snp) &&
+                this.haplotypeBlock.getSnps().stream().map(Snp::getName).noneMatch(n->n.equals(snp.getName()))) {
             throw new IllegalArgumentException("Snp " + snp + " does not belong to haplotype " + this.haplotypeBlock);
         }
     }
@@ -187,10 +194,12 @@ public abstract class HaplotypeProbabilities {
      * @return  log10( P(evidence| P(h_i)=P(h_i|otherHp) ) + c where c is an unknown constant
      */
     public double shiftedLogEvidenceProbabilityGivenOtherEvidence(final HaplotypeProbabilities otherHp) {
-        if (!this.haplotypeBlock.equals(otherHp.getHaplotype())) {
+        if (!this.haplotypeBlock.equals(otherHp.getHaplotype()) &&
+                this.haplotypeBlock.getSnps().stream().map(Snp::getName).noneMatch(n->n.equals(otherHp.getRepresentativeSnp().getName()))) {
             throw new IllegalArgumentException("Haplotypes are from different HaplotypeBlocks!");
         }
-        /** Get the posterior from the other otherHp. Use this posterior as the prior to calculate probability.
+        /*
+         * Get the posterior from the other otherHp. Use this posterior as the prior to calculate probability.
          *
          *   P(hap|x,y) = P(x|hap,y) P(hap|y) / P(x|y)
          *              = P(x | hap) * P(hap | y) / P(x)

@@ -63,6 +63,9 @@ public class FingerprintChecker {
     private double genotypingErrorRate = DEFAULT_GENOTYPING_ERROR_RATE;
     private int maximalPLDifference = DEFAULT_MAXIMAL_PL_DIFFERENCE;
 
+    // in order to give each file a unique index;
+    final AtomicInteger totalFilesRead = new AtomicInteger(0);
+
     public ValidationStringency getValidationStringency() {
         return validationStringency;
     }
@@ -289,6 +292,12 @@ public class FingerprintChecker {
         for (final String sample : fingerprints.keySet()) {
             final Fingerprint fp = fingerprints.get(sample);
 
+            // TODO: check that the sample's alleles are consistent with those of the HP.
+
+            // TODO: subset the genotype context to the alleles in the HP. In the case that
+            // TODO: the sample is genotyped as HOM for an allele that is in the HP, we take
+            // TODO: the rest of the evidence and put it on the other allele.
+
             //PLs are preferred over GTs
             //TODO: this code is replicated in various places (ReconstructTriosFromVCF for example). Needs refactoring.
             //TODO: add a way to force using GTs when both are available (why?)
@@ -353,13 +362,14 @@ public class FingerprintChecker {
         return intervals.uniqued();
     }
 
-    public Map<FingerprintIdDetails, Fingerprint> fingerprintVcf(final File vcfFile) {
+    public Map<FingerprintIdDetails, Fingerprint> fingerprintVcf(final File vcfFile, final int fileIndex) {
         final Map<FingerprintIdDetails, Fingerprint> fpIdMap = new HashMap<>();
 
         final Map<String, Fingerprint> sampleFpMap = loadFingerprints(vcfFile, null);
 
         sampleFpMap.forEach((key, value) -> {
             final FingerprintIdDetails fpId = new FingerprintIdDetails();
+            fpId.fileIndex=fileIndex;
             fpId.sample = key;
             fpId.file = vcfFile.getAbsolutePath();
 
@@ -372,7 +382,7 @@ public class FingerprintChecker {
      * Generates a Fingerprint per read group in the supplied SAM file using the loci provided in
      * the interval list.
      */
-    public Map<FingerprintIdDetails, Fingerprint> fingerprintSamFile(final File samFile, final IntervalList loci) {
+    public Map<FingerprintIdDetails, Fingerprint> fingerprintSamFile(final File samFile, final IntervalList loci, final int fileIndex) {
         final SamReader in = SamReaderFactory.makeDefault()
                 .enable(SamReaderFactory.Option.CACHE_FILE_BASED_INDEXES)
                 .open(samFile);
@@ -387,7 +397,7 @@ public class FingerprintChecker {
 
         // In some cases it is useful to allow duplicate reads to be used - the most common is in single-end
         // sequence data where the duplicate marking may have been overly aggressive, and there is useful
-        // non-redundant data in the reads marked as "duplicates'.
+        // non-redundant data in the reads marked as "duplicates".
         if (this.allowDuplicateReads) {
             final List<SamRecordFilter> filters = new ArrayList<>(1);
             filters.add(new NotPrimaryAlignmentFilter());
@@ -399,6 +409,7 @@ public class FingerprintChecker {
 
         for (final SAMReadGroupRecord rg : in.getFileHeader().getReadGroups()) {
             final FingerprintIdDetails id = new FingerprintIdDetails(rg.getPlatformUnit(), samFile.getAbsolutePath());
+            id.fileIndex = fileIndex;
             id.library = rg.getLibrary();
             id.sample = rg.getSample();
             fingerprintIdDetailsMap.put(rg, id);
@@ -610,9 +621,9 @@ public class FingerprintChecker {
             futures.put(executor.submit(() -> {
                 try {
                     if (CheckFingerprint.isBamOrSamFile(f)) {
-                        retval.putAll(fingerprintSamFile(f, intervals));
+                        retval.putAll(fingerprintSamFile(f, intervals, totalFilesRead.getAndIncrement()));
                     } else {
-                        retval.putAll(fingerprintVcf(f));
+                        retval.putAll(fingerprintVcf(f, totalFilesRead.getAndIncrement()));
                     }
 
                     log.debug("Processed file: " + f.getAbsolutePath() + " (" + filesRead.get() + ")");
@@ -672,8 +683,10 @@ public class FingerprintChecker {
         final IntervalList intervals = getLociToGenotype(expectedFingerprints);
 
         // Fingerprint the SAM files and calculate the results
+        int fileIndex = 0;
         for (final File f : samFiles) {
-            final Map<FingerprintIdDetails, Fingerprint> fingerprintsByReadGroup = fingerprintSamFile(f, intervals);
+
+            final Map<FingerprintIdDetails, Fingerprint> fingerprintsByReadGroup = fingerprintSamFile(f, intervals, fileIndex++);
 
             if (ignoreReadGroups) {
                 final Fingerprint combinedFp = new Fingerprint(specificSample, f, null);
@@ -771,7 +784,21 @@ public class FingerprintChecker {
 
         for (final HaplotypeProbabilities probs2 : expectedFp.values()) {
             final HaplotypeBlock haplotypeBlock = probs2.getHaplotype();
-            final HaplotypeProbabilities probs1 = observedFp.get(haplotypeBlock);
+
+
+            final HaplotypeProbabilities probs1;
+
+            if (observedFp.containsKey(haplotypeBlock)) {
+                probs1 = observedFp.get(haplotypeBlock);
+            } else {
+                // in the case that there are two haplotype maps (from different builds)
+                // we find the matching hapltype block by the id of the "firstSnp"
+                // this is slower so we only do this when the hashmap lookup has failed.
+                final Optional<HaplotypeBlock> matchingHaploBlock = observedFp.keySet().stream().filter(
+                        k -> k.getFirstSnp().getName().equals(haplotypeBlock.getFirstSnp().getName())).findAny();
+                probs1 = matchingHaploBlock.map(k -> observedFp.get(k)).orElse(null);
+            }
+
             if (probs1 == null) continue;
 
             final HaplotypeProbabilityOfNormalGivenTumor prob1AssumingDataFromTumor = new HaplotypeProbabilityOfNormalGivenTumor(probs1, pLoH);

@@ -118,7 +118,7 @@ public class FingerprintCheckerTest {
     public void testFingerprintVcf(final File vcfFile, final File genotypesFile, final String observedSampleAlias, final String expectedSampleAlias,
                                    final double llExpectedSample, final double llRandomSample, final double lodExpectedSample) throws IOException {
         final FingerprintChecker fpChecker = new FingerprintChecker(SUBSETTED_HAPLOTYPE_DATABASE_FOR_TESTING);
-        final Map<FingerprintIdDetails, Fingerprint> fp1 = fpChecker.fingerprintVcf(vcfFile);
+        final Map<FingerprintIdDetails, Fingerprint> fp1 = fpChecker.fingerprintVcf(vcfFile,0);
 
         Assert.assertFalse(fp1.isEmpty());
     }
@@ -135,7 +135,7 @@ public class FingerprintCheckerTest {
         final File na12891_r1 = new File(TEST_DATA_DIR, "NA12891.over.fingerprints.r1.sam");
         final File na12891_r2 = new File(TEST_DATA_DIR, "NA12891.over.fingerprints.r2.sam");
         final File na12892_r1 = new File(TEST_DATA_DIR, "NA12892.over.fingerprints.r1.sam");
-        final File na12892_r2 = new File(TEST_DATA_DIR, "NA12892.over.fingerprints.r1.sam");
+        final File na12892_r2 = new File(TEST_DATA_DIR, "NA12892.over.fingerprints.r2.sam");
 
         final File na12891_noRg = new File(TEST_DATA_DIR, "NA12891.over.fingerprints.noRgTag.sam");
 
@@ -150,7 +150,11 @@ public class FingerprintCheckerTest {
                 {na12892_r1, na12892_r2, true, false},
                 {na12892_r1, na12891_r2, false, false},
                 {na12892_r1, na12891_noRg, false, false},
-                {na12891_r1, na12891_noRg, true, false}
+                {na12891_r1, na12891_noRg, true, false},
+                {na12891_r1, na12891_r1, true, true},
+                {na12891_r2, na12891_r2, true, true},
+                {na12892_r2, na12892_r2, true, true},
+                {na12892_r1, na12892_r1, true, true},
         };
     }
 
