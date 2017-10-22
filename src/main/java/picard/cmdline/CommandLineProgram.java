@@ -158,7 +158,7 @@ public abstract class CommandLineProgram {
     */
     private CommandLineParser commandLineParser;
 
-    private final List<Header> defaultHeaders = new ArrayList<Header>();
+    private final List<Header> defaultHeaders = new ArrayList<>();
 
     /**
     * The reconstructed commandline used to run this program. Used for logging

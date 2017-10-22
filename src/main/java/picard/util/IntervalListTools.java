@@ -48,7 +48,7 @@ public class IntervalListTools extends CommandLineProgram {
             " values tab-separated: " +
             "<pre>" +
             "     -Sequence name (SN) <br />" +
-            "     -Start position (1-based)** <br />" +
+            "     -Start position (1-based) <br />" +
             "     -End position (1-based, end inclusive) <br />" +
             "     -Strand (either + or -) <br />" +
             "     -Interval name (ideally unique names for intervals)" +
@@ -58,7 +58,8 @@ public class IntervalListTools extends CommandLineProgram {
             "<pre>" +
             "java -jar picard.jar IntervalListTools \\<br />" +
             "      I=input.interval_list \\<br />" +
-            "      SI=input_2.interval_list \\<br />" +
+            "      I=input_2.interval_list \\<br />" +
+            "      ACTION=CONCAT \\<br />" +
             "      O=new.interval_list" +
             "</pre>" +
             "<hr />";
@@ -114,24 +115,39 @@ public class IntervalListTools extends CommandLineProgram {
             @Override
             IntervalList act(final List<IntervalList> list, final List<IntervalList> unused) {
                 if (!unused.isEmpty())
-                    throw new IllegalArgumentException(String.format("Second List found when action was %s. Ignoring second list.", this.name()));
+                    throw new IllegalArgumentException(String.format("Second List found when action was %s. Cowardly refusing to continue.", this.name()));
                 return IntervalList.concatenate(list);
+            }
+
+            @Override
+            public boolean takesSecondInput() {
+                return false;
             }
         },
         UNION("Like CONCATENATE but with UNIQUE and SORT implied, the result being the set-wise union of all INPUTS.") {
             @Override
             IntervalList act(final List<IntervalList> list, final List<IntervalList> unused) {
                 if (!unused.isEmpty())
-                    throw new IllegalArgumentException(String.format("Second List found when action was %s. Ignoring second list.", this.name()));
+                    throw new IllegalArgumentException(String.format("Second List found when action was %s. Cowardly refusing to continue.", this.name()));
                 return IntervalList.union(list);
+            }
+
+            @Override
+            public boolean takesSecondInput() {
+                return false;
             }
         },
         INTERSECT("The sorted, uniqued set of all loci that are contained in all of the INPUTs.") {
             @Override
             IntervalList act(final List<IntervalList> list, final List<IntervalList> unused) {
                 if (!unused.isEmpty())
-                    throw new IllegalArgumentException(String.format("Second List found when action was %s. Ignoring second list.", this.name()));
+                    throw new IllegalArgumentException(String.format("Second List found when action was %s. Cowardly refusing to continue.", this.name()));
                 return IntervalList.intersection(list);
+            }
+
+            @Override
+            public boolean takesSecondInput() {
+                return false;
             }
         },
         SUBTRACT("Subtracts SECOND_INPUT from INPUT. The resulting loci are there in INPUT that are not in SECOND_INPUT") {
@@ -140,17 +156,32 @@ public class IntervalListTools extends CommandLineProgram {
                 return IntervalList.subtract(list1, list2);
 
             }
+
+            @Override
+            public boolean takesSecondInput() {
+                return true;
+            }
         },
         SYMDIFF("Find loci that are in INPUT or SECOND_INPUT but are not in both.") {
             @Override
             IntervalList act(final List<IntervalList> list1, final List<IntervalList> list2) {
                 return IntervalList.difference(list1, list2);
             }
+
+            @Override
+            public boolean takesSecondInput() {
+                return true;
+            }
         },
         OVERLAPS("Find only intervals in INPUT that have any overlap with SECOND_INPUT") {
             @Override
             IntervalList act(final List<IntervalList> list1, final List<IntervalList> list2) {
                 return IntervalList.overlaps(list1, list2);
+            }
+
+            @Override
+            public boolean takesSecondInput() {
+                return true;
             }
         };
 
@@ -160,6 +191,8 @@ public class IntervalListTools extends CommandLineProgram {
             this.helpdoc = helpdoc;
         }
 
+
+
         @Override
         public String getHelpDoc() {
             return helpdoc;
@@ -167,11 +200,7 @@ public class IntervalListTools extends CommandLineProgram {
 
         abstract IntervalList act(final List<IntervalList> list1, final List<IntervalList> list2);
 
-    }
-
-    // Stock main method
-    public static void main(final String[] args) {
-        new IntervalListTools().instanceMainWithExit(args);
+        public abstract boolean takesSecondInput();
     }
 
     @Override
@@ -283,7 +312,7 @@ public class IntervalListTools extends CommandLineProgram {
 
 
     private List<IntervalList> openIntervalLists(final List<File> files){
-        final List<IntervalList> lists = new ArrayList<IntervalList>();
+        final List<IntervalList> lists = new ArrayList<>();
         for (final File f : files) {
             lists.add(TYPE.getIntervalList(f, INCLUDE_FILTERED).padded(PADDING));
         }
@@ -292,13 +321,20 @@ public class IntervalListTools extends CommandLineProgram {
 
     @Override
     protected String[] customCommandLineValidation() {
-        final List<String> errorMsgs = new ArrayList<String>();
+        final List<String> errorMsgs = new ArrayList<>();
         if (SCATTER_COUNT < 1) {
             errorMsgs.add("SCATTER_COUNT must be greater than 0.");
         }
         if (BREAK_BANDS_AT_MULTIPLES_OF < 0) {
             errorMsgs.add("BREAK_BANDS_AT_MULTIPLES_OF must be greater than or equal to 0.");
         }
+        if (SECOND_INPUT.isEmpty() && ACTION.takesSecondInput()) {
+            errorMsgs.add("SECOND_INPUT was not provided but action " + ACTION + " requires a second input.");
+        }
+        if (!SECOND_INPUT.isEmpty() && !ACTION.takesSecondInput()) {
+            errorMsgs.add("SECOND_INPUT was provided but action " + ACTION + " doesn't take a second input.");
+        }
+
         return errorMsgs.isEmpty() ? null : errorMsgs.toArray(new String[errorMsgs.size()]);
     }
 
@@ -324,7 +360,6 @@ public class IntervalListTools extends CommandLineProgram {
     public static File getScatteredFileName(final File scatterDirectory, final long scatterTotal, final String formattedIndex) {
         return new File(scatterDirectory.getAbsolutePath() + "/temp_" + formattedIndex + "_of_" +
                 scatterTotal + "/scattered" + IntervalList.INTERVAL_LIST_FILE_EXTENSION);
-
     }
 
     private static File createDirectoryAndGetScatterFile(final File outputDirectory, final long scatterCount, final String formattedIndex) {
@@ -364,7 +399,7 @@ public class IntervalListTools extends CommandLineProgram {
             applicableExtensions = extensions;
         }
 
-        abstract protected IntervalList getIntervalListInternal(final File file, final boolean includeFiltered);
+        protected abstract IntervalList getIntervalListInternal(final File file, final boolean includeFiltered);
 
         static TYPE forFile(final File intervalListExtractable) {
             for (final TYPE type : TYPE.values()) {
@@ -377,7 +412,7 @@ public class IntervalListTools extends CommandLineProgram {
             throw new SAMException("Cannot figure out type of file " + intervalListExtractable.getAbsolutePath() + " from extension. Current implementation understands the following types: " + Arrays.toString(TYPE.values()));
         }
 
-        static public IntervalList getIntervalList(final  File file, final boolean includeFiltered){
+        public static IntervalList getIntervalList(final  File file, final boolean includeFiltered){
             return forFile(file).getIntervalListInternal(file, includeFiltered);
         }
 
@@ -386,5 +421,4 @@ public class IntervalListTools extends CommandLineProgram {
             return super.toString() + ": " + applicableExtensions.toString();
         }
     }
-
 }

@@ -30,6 +30,7 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
 import picard.cmdline.CommandLineProgramTest;
+import picard.vcf.VcfTestUtils;
 
 import java.io.File;
 import java.util.stream.StreamSupport;
@@ -42,7 +43,7 @@ public class FilterSamReadsTest extends CommandLineProgramTest {
 
     private static final int READ_LENGTH = 151;
     private final SAMRecordSetBuilder builder = new SAMRecordSetBuilder();
-    private final static File TEST_DIR = new File("testdata/picard/sam/FilterSamReads/");
+    private static final String TEST_DIR = "testdata/picard/sam/";
 
 
     @BeforeTest
@@ -57,16 +58,16 @@ public class FilterSamReadsTest extends CommandLineProgramTest {
     @DataProvider(name = "dataTestJsFilter")
     public Object[][] dataTestJsFilter() {
         return new Object[][]{
-                {"testdata/picard/sam/aligned.sam", "testdata/picard/sam/FilterSamReads/filterOddStarts.js",3},
-                {"testdata/picard/sam/aligned.sam", "testdata/picard/sam/FilterSamReads/filterReadsWithout5primeSoftClip.js", 0}
+                {TEST_DIR + "aligned.sam", TEST_DIR + "FilterSamReads/filterOddStarts.js", 3},
+                {TEST_DIR + "aligned.sam", TEST_DIR + "FilterSamReads/filterReadsWithout5primeSoftClip.js", 0}
         };
     }
 
     @DataProvider(name = "dataTestPairedIntervalFilter")
     public Object[][] dataTestPairedIntervalFilter() {
         return new Object[][]{
-                {"testdata/picard/sam/FilterSamReads/filter1.interval_list", 4},
-                {"testdata/picard/sam/FilterSamReads/filter2.interval_list", 0}
+                {TEST_DIR + "FilterSamReads/filter1.interval_list", 4},
+                {TEST_DIR + "FilterSamReads/filter2.interval_list", 0}
         };
     }
     
@@ -93,10 +94,7 @@ public class FilterSamReadsTest extends CommandLineProgramTest {
     @Test(dataProvider = "dataTestPairedIntervalFilter")
     public void testPairedIntervalFilter(final String intervalFilename, final int expectNumber) throws Exception {
         // Build a sam file for testing
-        final File inputSam = File.createTempFile("testSam", ".sam", TEST_DIR);
-        inputSam.deleteOnExit();
-        final File sortedSamIdx = new File(TEST_DIR, inputSam.getName() + ".idx");
-        sortedSamIdx.deleteOnExit();
+        final File inputSam = VcfTestUtils.createTemporaryIndexedFile("testSam", ".bam");
 
         final SAMFileWriter writer = new SAMFileWriterFactory()
                 .setCreateIndex(true).makeSAMWriter(builder.getHeader(), false, inputSam);

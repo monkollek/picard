@@ -68,7 +68,7 @@ public class CheckFingerprint extends CommandLineProgram {
             "compares it to the expected fingerprint genotypes provided. The key output is a LOD score " +
             "which represents the relative likelihood of the sequence data originating from the same " +
             "sample as the genotypes vs. from a random sample.  Two outputs are produced: (1) a summary " +
-            "metrics file that gives metrics at the single sample level (if the input was a VCF) or at the read " +
+            "metrics file that gives metrics at the single sample level (if the input was a VCF) or at the readgroup " +
             "level (lane or index within a lane) (if the input was a SAM/BAM) " +
             "versus a set of known genotypes for the expected sample, and (2) a detail metrics file that " +
             "contains an individual SNP/Haplotype comparison within a fingerprint comparison.  The two " +
