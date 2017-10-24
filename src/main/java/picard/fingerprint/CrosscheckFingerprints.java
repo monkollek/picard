@@ -40,6 +40,7 @@ import picard.cmdline.programgroups.Fingerprinting;
 import picard.fingerprint.CrosscheckMetric.FingerprintResult;
 
 import java.io.*;
+import java.nio.file.Path;
 import java.text.NumberFormat;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
@@ -73,7 +74,7 @@ public class CrosscheckFingerprints extends CommandLineProgram {
 
     @Argument(shortName = StandardOptionDefinitions.INPUT_SHORT_NAME,
             doc = "One or more input files (or lists of files) to compare fingerprints for.")
-    public List<File> INPUT;
+    public List<String> INPUT;
 
     @Argument(shortName = "SI", optional = true, mutex={"MATRIX_OUTPUT"},
             doc = "One or more input files (or lists of files) to compare fingerprints for. If this option is given " +
@@ -82,7 +83,7 @@ public class CrosscheckFingerprints extends CommandLineProgram {
                     " When operating in this mode, each sample in INPUT must also have a corresponding sample in SECOND_INPUT. " +
                     "If this is violated, the program will proceed to check the matching samples, but report the missing samples" +
                     " and return a non-zero error-code." )
-    public List<File> SECOND_INPUT;
+    public List<String> SECOND_INPUT;
 
     @Argument(shortName = StandardOptionDefinitions.OUTPUT_SHORT_NAME, optional = true,
             doc = "Optional output file to write metrics to. Default is to write to stdout.")
@@ -149,8 +150,8 @@ public class CrosscheckFingerprints extends CommandLineProgram {
     @Override
     protected int doWork() {
         // Check inputs
-        IOUtil.assertFilesAreReadable(INPUT);
-        IOUtil.assertFilesAreReadable(SECOND_INPUT);
+      //  IOUtil.assertFilesAreReadable(INPUT);
+      //  IOUtil.assertFilesAreReadable(SECOND_INPUT);
 
         IOUtil.assertFileIsReadable(HAPLOTYPE_MAP);
         if (OUTPUT != null) IOUtil.assertFileIsWritable(OUTPUT);
@@ -178,13 +179,30 @@ public class CrosscheckFingerprints extends CommandLineProgram {
         extensions.add(IOUtil.SAM_FILE_EXTENSION);
         extensions.addAll(Arrays.asList(IOUtil.VCF_EXTENSIONS));
 
-        final List<File> unrolledFiles = IOUtil.unrollFiles(INPUT, extensions.toArray(new String[extensions.size()]));
-        IOUtil.assertFilesAreReadable(unrolledFiles);
+        //final List<File> unrolledFiles = IOUtil.unrollFiles(INPUT, extensions.toArray(new String[extensions.size()]));
+        //IOUtil.assertFilesAreReadable(unrolledFiles);
 
         // unroll and check readable here, as it can be annoying to fingerprint INPUT files and only then discover a problem
         // in a file in SECOND_INPUT
-        final List<File> unrolledFiles2 = IOUtil.unrollFiles(SECOND_INPUT, extensions.toArray(new String[extensions.size()]));
-        IOUtil.assertFilesAreReadable(unrolledFiles2);
+      //  final List<File> unrolledFiles2 = IOUtil.unrollFiles(SECOND_INPUT, extensions.toArray(new String[extensions.size()]));
+       // IOUtil.assertFilesAreReadable(unrolledFiles2);
+
+        List<Path> unrolledFiles = INPUT.stream().map((String)s -> {
+            try {
+                return IOUtil.getPath(s);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+        }).collect(Collectors.toList());
+
+        List<Path> unrolledFiles2 = SECOND_INPUT.stream().map((String)s -> {
+            try {
+                return IOUtil.getPath(s);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }).collect(Collectors.toList());
 
         log.info("Fingerprinting " + unrolledFiles.size() + " INPUT files.");
         final Map<FingerprintIdDetails, Fingerprint> fpMap = checker.fingerprintFiles(unrolledFiles, NUM_THREADS, 1, TimeUnit.DAYS);

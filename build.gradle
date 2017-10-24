@@ -47,7 +47,7 @@ jacoco {
     toolVersion = "0.7.5.201505241946"
 }
 
-final htsjdkVersion = System.getProperty('htsjdk.version', '2.12.0')
+final htsjdkVersion = System.getProperty('htsjdk.version', '2.12.0-21-gef7c9c2-SNAPSHOT')
 
 // Get the jdk files we need to run javaDoc. We need to use these during compile, testCompile,
 // test execution, and gatkDoc generation, but we don't want them as part of the runtime
@@ -68,6 +68,7 @@ dependencies {
 
     testCompile 'org.testng:testng:6.9.10'
     testCompile 'org.apache.commons:commons-lang3:3.6'
+    testCompile group: 'com.google.cloud', name: 'google-cloud-nio', version: '0.5.0'
 }
 
 configurations.all {
