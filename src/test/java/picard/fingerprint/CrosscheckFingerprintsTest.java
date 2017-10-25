@@ -390,36 +390,29 @@ public class CrosscheckFingerprintsTest {
 
 
     @DataProvider(name = "checkPathsData")
-    public Iterator<Object[]> checkPathsData() {
+    public Iterator<Object[]> checkPathsData() throws IOException {
         List<Object[]> tests = new ArrayList<>();
 
         String TEST_DATA_PATH_PREFIX="gs://picard-testdata/picard/fingerprint/";
-        String NA12891_1_vcf_path = TEST_DATA_PATH_PREFIX + "NA12891.fp.vcf";
+        String NA12891_1_vcf_path = TEST_DATA_PATH_PREFIX + "NA12891.g.vcf";
+
+        final File fofn = File.createTempFile("crosscheck","fofn",TEST_DIR);
+        fofn.deleteOnExit();
+
+        PrintWriter writer = new PrintWriter(new FileWriter(fofn));
+        writer.println(NA12891_1_vcf_path);
+        writer.println(NA12892_1_vcf.getAbsolutePath());
+        writer.println(NA12891_g_vcf.getAbsolutePath());
+        writer.println(NA12892_g_vcf.getAbsolutePath());
+        writer.close();
 
         // VCF tests
         tests.add(new Object[]{Arrays.asList(NA12891_1_vcf.getAbsolutePath(), NA12892_1_vcf.getAbsolutePath(), NA12891_g_vcf.getAbsolutePath(), NA12892_g_vcf.getAbsolutePath()), HAPLOTYPE_MAP.getAbsolutePath(), 0, 4*5/2, false});
         tests.add(new Object[]{Arrays.asList(NA12891_1_vcf_path, NA12892_1_vcf.getAbsolutePath(), NA12891_g_vcf.getAbsolutePath(), NA12892_g_vcf.getAbsolutePath()), HAPLOTYPE_MAP.getAbsolutePath(), 0, 4*5/2, false});
-//        tests.add(new Object[]{Arrays.asList(NA12892_and_NA123891_vcf, NA12891_g_vcf, NA12892_g_vcf),0,  4*5/2, false});
-//        tests.add(new Object[]{Arrays.asList(NA12891_named_NA12892_vcf,NA12891_1_vcf, NA12891_g_vcf, NA12892_g_vcf), 1, 4*5/2, false});
-//        tests.add(new Object[]{Arrays.asList(NA12891_1_vcf, NA12892_1_vcf, NA12891_2_vcf, NA12892_1_vcf),  0,4*3/2, false});
-//        tests.add(new Object[]{Arrays.asList(NA12892_and_NA123891_vcf, NA12891_2_vcf, NA12892_1_vcf), 0, 4*5/2, false});
-//        tests.add(new Object[]{Arrays.asList(NA12892_and_NA123891_vcf, NA12891_g_vcf, NA12891_named_NA12892_vcf), 1, 4*5/2, false});
-//
-//        // SAM vs. VCF
-//        tests.add(new Object[]{Arrays.asList(NA12891_r1, NA12892_r1, NA12891_r2, NA12892_r2, NA12891_g_vcf, NA12892_g_vcf), 0, 6 * 7/2, false});
-//        tests.add(new Object[]{Arrays.asList(NA12891_named_NA12892_r1, NA12891_r1, NA12891_g_vcf, NA12891_1_vcf), 1, 4*5/2, false});
-//
-//        tests.add(new Object[]{Arrays.asList(NA12891_1_vcf, NA12892_r1, NA12891_r2, NA12892_1_vcf), 0, 4*5/2, true});
-//
-//        // SAM tests
-//        tests.add(new Object[]{Arrays.asList(NA12891_r1, NA12892_r1, NA12891_r2, NA12892_r2), 0, 4*5/2, true});
-//        tests.add(new Object[]{Arrays.asList(NA12891_r1, NA12892_r1, NA12891_r2), 0, 3*4/2, true});
-//
-//        tests.add(new Object[]{Arrays.asList(NA12891_r1, NA12891_named_NA12892_r1, NA12891_r2, NA12892_r2), 1, 4*5/2, false});
+        tests.add(new Object[]{Collections.singletonList(fofn.getAbsolutePath()), HAPLOTYPE_MAP.getAbsolutePath(), 0, 4*5/2, false});
 
         return tests.iterator();
     }
-
 
 
     @Test(dataProvider = "checkPathsData")
@@ -438,7 +431,6 @@ public class CrosscheckFingerprintsTest {
 
         doTest(args.toArray(new String[args.size()]), metrics, expectedRetVal, numberOfSamples , CrosscheckMetric.DataType.FILE, ExpectAllMatch);
     }
-
 
 
 

@@ -639,7 +639,7 @@ public class FingerprintChecker {
             try {
                 futureFileEntry.getKey().get();
             } catch (InterruptedException | ExecutionException e) {
-                log.error("Failed to fingerprint on file: " + futureFileEntry.getValue());
+                log.error("Failed to fingerprint file: " + futureFileEntry.getValue());
                 throw new RuntimeException(e);
             }
         }
@@ -647,15 +647,15 @@ public class FingerprintChecker {
         return retval;
     }
 
-    /**
-     * Top level method to take a set of one or more SAM files and one or more Genotype files and compare
-     * each read group in each SAM file to each set of fingerprint genotypes.
-     *
-     * @param samFiles         the list of SAM files to fingerprint
-     * @param genotypeFiles    the list of genotype files from which to pull fingerprint genotypes
-     * @param specificSample   an optional single sample who's genotypes to load from the supplied files
-     * @param ignoreReadGroups aggregate data into one fingerprint per file, instead of splitting by RG
-     */
+        /**
+         * Top level method to take a set of one or more SAM files and one or more Genotype files and compare
+         * each read group in each SAM file to each set of fingerprint genotypes.
+         *
+         * @param samFiles         the list of SAM files to fingerprint
+         * @param genotypeFiles    the list of genotype files from which to pull fingerprint genotypes
+         * @param specificSample   an optional single sample who's genotypes to load from the supplied files
+         * @param ignoreReadGroups aggregate data into one fingerprint per file, instead of splitting by RG
+         */
     public List<FingerprintResults> checkFingerprints(final List<Path> samFiles,
                                                       final List<Path> genotypeFiles,
                                                       final String specificSample,
@@ -714,10 +714,10 @@ public class FingerprintChecker {
      * @param observedSample        an optional single sample whose genotypes to load from the observed genotype file (if null, use all)
      * @param expectedSample        an optional single sample whose genotypes to load from the expected genotype file (if null, use all)
      */
-    public List<FingerprintResults> checkFingerprints(final List<Path> observedGenotypeFiles,
-                                                      final List<Path> expectedGenotypeFiles,
-                                                      final String observedSample,
-                                                      final String expectedSample) {
+    public List<FingerprintResults> checkFingerprintsFromPaths(final List<Path> observedGenotypeFiles,
+                                                               final List<Path> expectedGenotypeFiles,
+                                                               final String observedSample,
+                                                               final String expectedSample) {
 
         // Load the expected fingerprint genotypes
         final List<Fingerprint> expectedFingerprints = new ArrayList<>();

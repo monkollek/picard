@@ -61,6 +61,7 @@ dependencies {
     compile 'com.google.guava:guava:15.0'
     compile 'com.github.samtools:htsjdk:' + htsjdkVersion
     compile 'org.broadinstitute:barclay:1.1.0'
+    compile 'com.google.cloud:google-cloud-nio:0.20.4-alpha-20170727.190814-1:shaded'
 
     // javadoc utilities; compile/test only to prevent redistribution of sdk jars
     compileOnly(javadocJDKFiles)
@@ -68,7 +69,6 @@ dependencies {
 
     testCompile 'org.testng:testng:6.9.10'
     testCompile 'org.apache.commons:commons-lang3:3.6'
-    testCompile group: 'com.google.cloud', name: 'google-cloud-nio', version: '0.5.0'
 }
 
 configurations.all {

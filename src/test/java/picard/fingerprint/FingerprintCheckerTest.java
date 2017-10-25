@@ -1,6 +1,5 @@
 package picard.fingerprint;
 
-import htsjdk.samtools.util.IOUtil;
 import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.DataProvider;
@@ -101,7 +100,7 @@ public class FingerprintCheckerTest {
         final Path indexedGenotypesVcf = VcfTestUtils.createTemporaryIndexedVcfFromInput(genotypesFile, "fingerprintcheckertest.tmp.").toPath();
 
         final FingerprintChecker fpChecker = new FingerprintChecker(SUBSETTED_HAPLOTYPE_DATABASE_FOR_TESTING);
-        final List<FingerprintResults> results = fpChecker.checkFingerprints(Collections.singletonList(indexedInputVcf),
+        final List<FingerprintResults> results = fpChecker.checkFingerprintsFromPaths(Collections.singletonList(indexedInputVcf),
                 Collections.singletonList(indexedGenotypesVcf),
                 observedSampleAlias,
                 expectedSampleAlias);

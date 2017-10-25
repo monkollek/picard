@@ -34,7 +34,6 @@ import htsjdk.samtools.util.IOUtil;
 import htsjdk.samtools.util.Log;
 import htsjdk.samtools.util.SequenceUtil;
 import htsjdk.variant.utils.SAMSequenceDictionaryExtractor;
-import htsjdk.variant.vcf.VCFFileReader;
 import htsjdk.variant.vcf.VCFHeader;
 import htsjdk.variant.vcf.VCFPathReader;
 import org.broadinstitute.barclay.argparser.Argument;
@@ -211,7 +210,7 @@ public class CheckFingerprint extends CommandLineProgram {
                 EXPECTED_SAMPLE_ALIAS = observedSampleAlias;
             }
 
-            results = checker.checkFingerprints(
+            results = checker.checkFingerprintsFromPaths(
                     Collections.singletonList(INPUT),
                     Collections.singletonList(GENOTYPES),
                     observedSampleAlias,
@@ -300,6 +299,6 @@ public class CheckFingerprint extends CommandLineProgram {
         return (BamFileIoUtils.isBamFile(f) || f.getName().endsWith(IOUtil.SAM_FILE_EXTENSION));
     }
     static boolean isBamOrSam(final Path p) {
-        return (p.toUri().getRawQuery().endsWith(BamFileIoUtils.BAM_FILE_EXTENSION) || p.toUri().getRawQuery().endsWith(IOUtil.SAM_FILE_EXTENSION));
+        return (p.toUri().getRawPath().endsWith(BamFileIoUtils.BAM_FILE_EXTENSION) || p.toUri().getRawPath().endsWith(IOUtil.SAM_FILE_EXTENSION));
     }
 }
