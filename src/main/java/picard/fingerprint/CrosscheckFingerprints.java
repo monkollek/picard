@@ -126,7 +126,7 @@ public class CrosscheckFingerprints extends CommandLineProgram {
     public int NUM_THREADS = 1;
 
     @Argument(doc = "specifies whether the Tumor-aware result should be calculated. These are time consuming and can roughly double the " +
-            "runtime of the tool. When crosschecking many groups not calculating the tumor-aware  results can result in a significant speedup.", optional = true)
+            "runtime of the tool. When crosschecking many groups not calculating the tumor-aware  results can result in a significant speedup.")
     public boolean CALCULATE_TUMOR_AWARE_RESULTS = true;
 
     @Argument(doc = "Allow the use of duplicate reads in performing the comparison. Can be useful when duplicate " +
@@ -186,12 +186,17 @@ public class CrosscheckFingerprints extends CommandLineProgram {
                         .build());
     }
 
+    @Override
+    protected String[] customCommandLineValidation() {
+        if (GENOTYPING_ERROR_RATE <= 0 || GENOTYPING_ERROR_RATE >= 1) {
+            return new String[]{"Genotyping error must be strictly greater than 0 and less than 1, found " + GENOTYPING_ERROR_RATE};
+        }
+        return super.customCommandLineValidation();
+    }
 
     @Override
     protected int doWork() {
         // Check inputs
-      //  IOUtil.assertFilesAreReadable(INPUT);
-      //  IOUtil.assertFilesAreReadable(SECOND_INPUT);
 
         IOUtil.assertFileIsReadable(HAPLOTYPE_MAP);
         if (OUTPUT != null) IOUtil.assertFileIsWritable(OUTPUT);

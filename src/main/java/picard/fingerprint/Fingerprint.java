@@ -24,7 +24,6 @@
 
 package picard.fingerprint;
 
-import java.io.File;
 import java.nio.file.Path;
 import java.util.*;
 
