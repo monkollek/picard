@@ -56,7 +56,7 @@ public class MatchResults implements Comparable<MatchResults> {
         return lodTN;
     }
 
-    private final SortedSet<LocusResult> locusResults = new TreeSet<LocusResult>();
+    private final SortedSet<LocusResult> locusResults;
 
     MatchResults(final Path fingerprintFile, final String sample,
                  final double sampleLikelihood, final double populationLikelihood, final double lodTN, final double lodNT,
@@ -70,12 +70,10 @@ public class MatchResults implements Comparable<MatchResults> {
         this.lodNT = lodNT;
 
         if (locusResults != null) {
-            this.locusResults.addAll(locusResults);
+            this.locusResults = new TreeSet<>(locusResults);
+        } else {
+            this.locusResults = null;
         }
-    }
-
-    public void addLocusResult(final LocusResult result) {
-        this.locusResults.add(result);
     }
 
     /** Provides a natural sort so that better matches (by LOD) sort earlier. */

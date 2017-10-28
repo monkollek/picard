@@ -385,7 +385,6 @@ public class FingerprintChecker {
         SequenceUtil.assertSequenceDictionariesEqual(this.haplotypes.getHeader().getSequenceDictionary(),
                 in.getFileHeader().getSequenceDictionary());
 
-        
         final SamLocusIterator iterator = new SamLocusIterator(in, loci, in.hasIndex());
         iterator.setEmitUncoveredLoci(true);
         iterator.setMappingQualityScoreCutoff(this.minimumMappingQuality);
@@ -614,17 +613,17 @@ public class FingerprintChecker {
 
         for (final Path p : files) {
             futures.put(executor.submit(() -> {
-             
-                    if (CheckFingerprint.isBamOrSam(p)) {
-                        retval.putAll(fingerprintSamFile(p, intervals));
-                    } else {
-                        retval.putAll(fingerprintVcf(p));
-                    }
 
-                    log.debug("Processed file: " + p.toUri().toString() + " (" + filesRead.get() + ")");
-                    if (filesRead.incrementAndGet() % 100 == 0) {
-                        log.info("Processed " + filesRead.get() + " out of " + files.size());
-                    }
+                if (CheckFingerprint.isBamOrSam(p)) {
+                    retval.putAll(fingerprintSamFile(p, intervals));
+                } else {
+                    retval.putAll(fingerprintVcf(p));
+                }
+
+                log.debug("Processed file: " + p.toUri().toString() + " (" + filesRead.get() + ")");
+                if (filesRead.incrementAndGet() % 100 == 0) {
+                    log.info("Processed " + filesRead.get() + " out of " + files.size());
+                }
             }), p);
         }
 
@@ -647,15 +646,15 @@ public class FingerprintChecker {
         return retval;
     }
 
-        /**
-         * Top level method to take a set of one or more SAM files and one or more Genotype files and compare
-         * each read group in each SAM file to each set of fingerprint genotypes.
-         *
-         * @param samFiles         the list of SAM files to fingerprint
-         * @param genotypeFiles    the list of genotype files from which to pull fingerprint genotypes
-         * @param specificSample   an optional single sample who's genotypes to load from the supplied files
-         * @param ignoreReadGroups aggregate data into one fingerprint per file, instead of splitting by RG
-         */
+    /**
+     * Top level method to take a set of one or more SAM files and one or more Genotype files and compare
+     * each read group in each SAM file to each set of fingerprint genotypes.
+     *
+     * @param samFiles         the list of SAM files to fingerprint
+     * @param genotypeFiles    the list of genotype files from which to pull fingerprint genotypes
+     * @param specificSample   an optional single sample who's genotypes to load from the supplied files
+     * @param ignoreReadGroups aggregate data into one fingerprint per file, instead of splitting by RG
+     */
     public List<FingerprintResults> checkFingerprints(final List<Path> samFiles,
                                                       final List<Path> genotypeFiles,
                                                       final String specificSample,
@@ -749,6 +748,11 @@ public class FingerprintChecker {
         return resultsList;
     }
 
+    public static MatchResults calculateMatchResults(final Fingerprint observedFp, final Fingerprint expectedFp, final double minPExpected, final double pLoH) {
+        return calculateMatchResults(observedFp, expectedFp, minPExpected, pLoH, true, true);
+
+    }
+
     /**
      * Compares two fingerprints and calculates a MatchResults object which contains detailed
      * information about the match (or mismatch) between fingerprints including the LOD score
@@ -760,8 +764,8 @@ public class FingerprintChecker {
      * In the cases where the most likely genotypes from the two fingerprints do not match the
      * lExpectedSample is Max(actualpExpectedSample, minPExpected).
      */
-    public static MatchResults calculateMatchResults(final Fingerprint observedFp, final Fingerprint expectedFp, final double minPExpected, final double pLoH) {
-        final List<LocusResult> locusResults = new ArrayList<>();
+    public static MatchResults calculateMatchResults(final Fingerprint observedFp, final Fingerprint expectedFp, final double minPExpected, final double pLoH, final boolean calculateLocusInfo, final boolean calculateTumorAwareLod) {
+        final List<LocusResult> locusResults = calculateLocusInfo ? new ArrayList<>() : null;
 
         double llThisSample = 0;
         double llOtherSample = 0;
@@ -776,42 +780,55 @@ public class FingerprintChecker {
             final HaplotypeProbabilities probs1 = observedFp.get(haplotypeBlock);
             if (probs1 == null) continue;
 
-            final HaplotypeProbabilityOfNormalGivenTumor prob1AssumingDataFromTumor = new HaplotypeProbabilityOfNormalGivenTumor(probs1, pLoH);
-            final HaplotypeProbabilityOfNormalGivenTumor prob2AssumingDataFromTumor = new HaplotypeProbabilityOfNormalGivenTumor(probs2, pLoH);
+            final HaplotypeProbabilityOfNormalGivenTumor prob1AssumingDataFromTumor;
+            final HaplotypeProbabilityOfNormalGivenTumor prob2AssumingDataFromTumor;
+            if (calculateTumorAwareLod) {
+                prob1AssumingDataFromTumor = new HaplotypeProbabilityOfNormalGivenTumor(probs1, pLoH);
+                prob2AssumingDataFromTumor = new HaplotypeProbabilityOfNormalGivenTumor(probs2, pLoH);
+            } else {
+                prob1AssumingDataFromTumor = null;
+                prob2AssumingDataFromTumor = null;
+            }
 
             // If one is from genotype data we'd like to report the output relative
             // to the genotyped SNP instead of against a random SNP from the haplotype
             final Snp snp = probs2.getRepresentativeSnp();
-            final DiploidGenotype externalGenotype = probs2.getMostLikelyGenotype(snp);
-            final LocusResult lr = new LocusResult(snp,
-                    externalGenotype,
-                    probs1.getMostLikelyGenotype(snp),
-                    probs1.getObsAllele1(),
-                    probs1.getObsAllele2(),
-                    probs1.getLodMostProbableGenotype(),
-                    // expected sample log-likelihood
-                    probs1.shiftedLogEvidenceProbabilityGivenOtherEvidence(probs2),
-                    // random sample log-likelihood
-                    probs1.shiftedLogEvidenceProbability(),
+            if (calculateLocusInfo) {
+                final DiploidGenotype externalGenotype = probs2.getMostLikelyGenotype(snp);
+                final LocusResult lr = new LocusResult(snp,
+                        externalGenotype,
+                        probs1.getMostLikelyGenotype(snp),
+                        probs1.getObsAllele1(),
+                        probs1.getObsAllele2(),
+                        probs1.getLodMostProbableGenotype(),
+                        // expected sample log-likelihood
+                        probs1.shiftedLogEvidenceProbabilityGivenOtherEvidence(probs2),
+                        // random sample log-likelihood
+                        probs1.shiftedLogEvidenceProbability(),
 
-                    // probs1 is tumor probs2 is normal, correct sample lod
-                    prob1AssumingDataFromTumor.shiftedLogEvidenceProbabilityGivenOtherEvidence(probs2) -
-                            prob1AssumingDataFromTumor.shiftedLogEvidenceProbability(),
-                    // probs1 is normal probs2 is tumor, correct sample lod
-                    probs1.shiftedLogEvidenceProbabilityGivenOtherEvidence(prob2AssumingDataFromTumor) -
-                            probs1.shiftedLogEvidenceProbability());
+                        // probs1 is tumor probs2 is normal, correct sample lod
+                        calculateTumorAwareLod ? prob1AssumingDataFromTumor.shiftedLogEvidenceProbabilityGivenOtherEvidence(probs2) -
+                                prob1AssumingDataFromTumor.shiftedLogEvidenceProbability() : 0,
+                        // probs1 is normal probs2 is tumor, correct sample lod
+                        calculateTumorAwareLod ? probs1.shiftedLogEvidenceProbabilityGivenOtherEvidence(prob2AssumingDataFromTumor) -
+                                probs1.shiftedLogEvidenceProbability() : 0);
 
-            locusResults.add(lr);
-
+                locusResults.add(lr);
+            }
             if (probs1.hasEvidence() && probs2.hasEvidence()) {
-                final double lRandom = lr.lRandomSample();
                 //TODO: what's the mathematics behind the lminPexpected?
-                final double lExpected = Math.max(lminPExpected, lr.lExpectedSample());
+                llThisSample += Math.max(lminPExpected,
+                        probs1.shiftedLogEvidenceProbabilityGivenOtherEvidence(probs2));
 
-                llThisSample += lExpected;
-                llOtherSample += lRandom;
-                lodExpectedSampleTumorNormal += lr.getLodExpectedSampleTumorNormal();
-                lodExpectedSampleNormalTumor += lr.getLodExpectedSampleNormalTumor();
+                llOtherSample += probs1.shiftedLogEvidenceProbability();
+
+                if (calculateTumorAwareLod) {
+                    lodExpectedSampleTumorNormal += prob1AssumingDataFromTumor.shiftedLogEvidenceProbabilityGivenOtherEvidence(probs2) -
+                            prob1AssumingDataFromTumor.shiftedLogEvidenceProbability();
+
+                    lodExpectedSampleNormalTumor += probs1.shiftedLogEvidenceProbabilityGivenOtherEvidence(prob2AssumingDataFromTumor) -
+                            probs1.shiftedLogEvidenceProbability();
+                }
             }
         }
 
@@ -843,9 +860,9 @@ public class FingerprintChecker {
     }
 
     static boolean isQueryable(final Path vcf) {
-        try{
+        try {
             if (!vcf.toFile().isFile()) return false;
-        } catch (UnsupportedOperationException e){
+        } catch (UnsupportedOperationException e) {
             //noop
         }
         try (final VCFPathReader reader = new VCFPathReader(vcf, false)) {
@@ -855,5 +872,5 @@ public class FingerprintChecker {
         }
         return true;
     }
-    
+
 }

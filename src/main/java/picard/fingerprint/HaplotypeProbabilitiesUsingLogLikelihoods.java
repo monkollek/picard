@@ -24,6 +24,7 @@
 
 package picard.fingerprint;
 
+import com.google.protobuf.Internal;
 import picard.util.MathUtil;
 import java.util.Arrays;
 import static java.lang.Math.log10;
@@ -138,8 +139,19 @@ abstract class HaplotypeProbabilitiesUsingLogLikelihoods extends HaplotypeProbab
     @Override
     public double getLodMostProbableGenotype() {
         final double[] logs = getShiftedLogPosterior();
-        Arrays.sort(logs);
-        return logs[Genotype.values().length-1] - logs[Genotype.values().length-2];
-    }
+        double biggest = -Double.MAX_VALUE;
+        double secondBiggest = biggest;
 
+        for (double prob : logs) {
+            if (prob > biggest) {
+                secondBiggest = biggest;
+                biggest = prob;
+                continue;
+            }
+            if (prob > secondBiggest) {
+                secondBiggest = prob;
+            }
+        }
+        return biggest - secondBiggest;
+    }
 }

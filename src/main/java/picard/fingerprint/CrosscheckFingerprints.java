@@ -125,6 +125,10 @@ public class CrosscheckFingerprints extends CommandLineProgram {
     @Argument(doc = "The number of threads to use to process files and generate Fingerprints.")
     public int NUM_THREADS = 1;
 
+    @Argument(doc = "specifies whether the Tumor-aware result should be calculated. These are time consuming and can roughly double the " +
+            "runtime of the tool. When crosschecking many groups not calculating the tumor-aware  results can result in a significant speedup.", optional = true)
+    public boolean CALCULATE_TUMOR_AWARE_RESULTS = true;
+
     @Argument(doc = "Allow the use of duplicate reads in performing the comparison. Can be useful when duplicate " +
             "marking has been overly aggressive and coverage is low.")
     public boolean ALLOW_DUPLICATE_READS = false;
@@ -409,7 +413,8 @@ public class CrosscheckFingerprints extends CommandLineProgram {
                 final FingerprintIdDetails rhsRg = fingerprintIdDetails.get(j);
                 final boolean expectedToMatch = EXPECT_ALL_GROUPS_TO_MATCH || lhsRg.sample.equals(rhsRg.sample);
 
-                final MatchResults results = FingerprintChecker.calculateMatchResults(fingerprints.get(lhsRg), fingerprints.get(rhsRg), GENOTYPING_ERROR_RATE, LOSS_OF_HET_RATE);
+                final MatchResults results = FingerprintChecker.calculateMatchResults(fingerprints.get(lhsRg), fingerprints.get(rhsRg),
+                        GENOTYPING_ERROR_RATE, LOSS_OF_HET_RATE, false, CALCULATE_TUMOR_AWARE_RESULTS);
                 final FingerprintResult result = getMatchResults(expectedToMatch, results);
 
                 if (!OUTPUT_ERRORS_ONLY || result == FingerprintResult.INCONCLUSIVE || !result.isExpected()) {
@@ -457,7 +462,8 @@ public class CrosscheckFingerprints extends CommandLineProgram {
                 continue;
             }
 
-            final MatchResults results = FingerprintChecker.calculateMatchResults(fingerprints1BySample.get(lhsID), fingerprints2BySample.get(rhsID), GENOTYPING_ERROR_RATE, LOSS_OF_HET_RATE);
+            final MatchResults results = FingerprintChecker.calculateMatchResults(fingerprints1BySample.get(lhsID), fingerprints2BySample.get(rhsID),
+                    GENOTYPING_ERROR_RATE, LOSS_OF_HET_RATE, false, CALCULATE_TUMOR_AWARE_RESULTS);
             final CrosscheckMetric.FingerprintResult result = getMatchResults(true, results);
 
             if (!OUTPUT_ERRORS_ONLY || !result.isExpected()) {
