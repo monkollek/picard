@@ -95,8 +95,8 @@ abstract class HaplotypeProbabilitiesUsingLogLikelihoods extends HaplotypeProbab
     /**
      * Returns the posterior probability of the haplotypes given the evidence (uses the internal prior)
      */
-    public double[] getPosteriorProbabilities0() {
-        return MathUtil.pNormalizeLogProbability(getShiftedLogPosterior());
+    private double[] getPosteriorProbabilities0() {
+        return MathUtil.pNormalizeLogProbability(getShiftedLogPosterior0());
     }
 
     /**
