@@ -625,6 +625,10 @@ public class FingerprintChecker {
                     log.info("Processed " + filesRead.get() + " out of " + files.size());
                 }
             }), p);
+
+            // checks the isDone() Futures and checks that they didn't fail, so that if
+            // one of them does fail we can fail-fast. (removes the isDone futures from the map)
+            checkFutures(futures);
         }
 
         executor.shutdown();
@@ -634,16 +638,29 @@ public class FingerprintChecker {
             log.warn(ie, "Interrupted while waiting for executor to terminate.");
         }
 
+        // checks the isDone() Futures and checks that they didn't fail, so that if
+        // one of them does fail we can fail-fast. (removes the isDone futures from the map)
+        checkFutures(futures);
+
+        return retval;
+    }
+
+    /**
+     * checks to see if any of the done futures in the map have thrown an exception,
+     *   and in that case throws a RuntimeException.
+     *
+     *   Removes isDone() futures from the map.
+     */
+    private void checkFutures(final Map<Future<?>, Path> futures){
         for (final Map.Entry<Future<?>, Path> futureFileEntry : futures.entrySet()) {
             try {
                 futureFileEntry.getKey().get();
+                futures.remove(futureFileEntry.getKey());
             } catch (InterruptedException | ExecutionException e) {
                 log.error("Failed to fingerprint file: " + futureFileEntry.getValue());
                 throw new RuntimeException(e);
             }
         }
-
-        return retval;
     }
 
     /**
