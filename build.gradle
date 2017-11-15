@@ -61,7 +61,7 @@ dependencies {
     compile 'com.google.guava:guava:15.0'
     compile 'com.github.samtools:htsjdk:' + htsjdkVersion
     compile 'org.broadinstitute:barclay:1.1.0'
-    compile 'com.google.cloud:google-cloud-nio:0.20.4-alpha-20170727.190814-1:shaded'
+    compileOnly 'com.google.cloud:google-cloud-nio:0.28.0-alpha:shaded'
 
     // javadoc utilities; compile/test only to prevent redistribution of sdk jars
     compileOnly(javadocJDKFiles)

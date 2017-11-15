@@ -25,15 +25,10 @@
 
 package picard.fingerprint;
 
-import com.google.cloud.http.HttpTransportOptions;
-import com.google.cloud.storage.StorageOptions;
-import com.google.cloud.storage.contrib.nio.CloudStorageConfiguration;
-import com.google.cloud.storage.contrib.nio.CloudStorageFileSystemProvider;
 import htsjdk.samtools.BamFileIoUtils;
 import htsjdk.samtools.metrics.MetricsFile;
 import htsjdk.samtools.util.IOUtil;
 import htsjdk.samtools.util.Log;
-import htsjdk.samtools.util.ProgressLogger;
 import org.broadinstitute.barclay.argparser.Argument;
 import org.broadinstitute.barclay.argparser.CommandLineProgramProperties;
 import org.broadinstitute.barclay.help.DocumentedFeature;
@@ -42,8 +37,6 @@ import picard.cmdline.CommandLineProgram;
 import picard.cmdline.StandardOptionDefinitions;
 import picard.cmdline.programgroups.Fingerprinting;
 import picard.fingerprint.CrosscheckMetric.FingerprintResult;
-import shaded.cloud_nio.com.google.api.gax.retrying.RetrySettings;
-import shaded.cloud_nio.org.threeten.bp.Duration;
 
 import java.io.*;
 import java.nio.file.Path;
@@ -158,33 +151,6 @@ public class CrosscheckFingerprints extends CommandLineProgram {
     private final List<String> matrixKeys = new ArrayList<>();
 
     // TODO: this function needs to find a better home
-    /** The config we want to use. **/
-    private static CloudStorageConfiguration getCloudStorageConfiguration(int maxReopens) {
-        return CloudStorageConfiguration.builder()
-                // if the channel errors out, re-open up to this many times
-                .maxChannelReopens(maxReopens)
-                .build();
-    }
-
-
-    // TODO: this function needs to find a better home
-    private static StorageOptions.Builder setGenerousTimeouts(StorageOptions.Builder builder) {
-        return builder
-                .setTransportOptions(HttpTransportOptions.newBuilder()
-                        .setConnectTimeout(120_000)
-                        .setReadTimeout(120_000)
-                        .build())
-                .setRetrySettings(RetrySettings.newBuilder()
-                        .setMaxAttempts(15)
-                        .setMaxRetryDelay(Duration.ofMillis(256_000L))
-                        .setTotalTimeout(Duration.ofMillis(4000_000L))
-                        .setInitialRetryDelay(Duration.ofMillis(1000L))
-                        .setRetryDelayMultiplier(2.0)
-                        .setInitialRpcTimeout(Duration.ofMillis(180_000L))
-                        .setRpcTimeoutMultiplier(1.0)
-                        .setMaxRpcTimeout(Duration.ofMillis(180_000L))
-                        .build());
-    }
 
     @Override
     protected String[] customCommandLineValidation() {
@@ -224,9 +190,6 @@ public class CrosscheckFingerprints extends CommandLineProgram {
         extensions.add(IOUtil.SAM_FILE_EXTENSION);
         extensions.addAll(Arrays.asList(IOUtil.VCF_EXTENSIONS));
 
-        // TODO: This needs to be dealt with better....
-        CloudStorageFileSystemProvider.setDefaultCloudStorageConfiguration(getCloudStorageConfiguration(20));
-        CloudStorageFileSystemProvider.setStorageOptions(setGenerousTimeouts(StorageOptions.newBuilder()).build());
 
         final List<Path> inputPaths = IOUtil.getPaths(INPUT);
 
