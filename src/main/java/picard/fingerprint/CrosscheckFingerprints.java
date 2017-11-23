@@ -84,7 +84,7 @@ public class CrosscheckFingerprints extends CommandLineProgram {
     @Argument(doc = "A tsv with two columns representing the sample as it appears in the INPUT data (in column 1) and " +
             "the sample as it should be used for comparisons to SECOND_INPUT (in the second column). " +
             "Need only include the samples that change. " +
-            "Values in column 1 should be unique and exist in the data. " +
+            "Values in column 1 should be unique. " +
             "Values in column 2 should be unique even in union with the remaining unmapped samples. " +
             "Should only be used with SECOND_INPUT. ", optional = true)
     public File INPUT_SAMPLE_MAP;
@@ -94,10 +94,10 @@ public class CrosscheckFingerprints extends CommandLineProgram {
                     "the program compares samples in INPUT only with samples from SECOND_INPUT.")
     public List<String> SECOND_INPUT;
 
-    @Argument(doc = "A tsv with two columns representing the sample as it appears in the INPUT data (in column 1) and " +
+    @Argument(doc = "A tsv with two columns representing the sample as it appears in the SECOND_INPUT data (in column 1) and " +
             "the sample as it should be used for comparisons to INPUT (in the second column). " +
             "Need only include the samples that change. " +
-            "Values in column 1 should be unique and exist in the data. " +
+            "Values in column 1 should be unique. " +
             "Values in column 2 should be unique even in union with the remaining unmapped samples. " +
             "Should only be used with SECOND_INPUT. ", optional = true)
     public File SECOND_INPUT_SAMPLE_MAP;
@@ -255,10 +255,9 @@ public class CrosscheckFingerprints extends CommandLineProgram {
         log.info("Fingerprinting " + unrolledFiles.size() + " INPUT files.");
         final Map<FingerprintIdDetails, Fingerprint> fpMap = checker.fingerprintFiles(unrolledFiles, NUM_THREADS, 1, TimeUnit.DAYS);
 
-        if (INPUT_SAMPLE_MAP != null ) {
-           remapFingerprints(fpMap, INPUT_SAMPLE_MAP);
+        if (INPUT_SAMPLE_MAP != null) {
+            remapFingerprints(fpMap, INPUT_SAMPLE_MAP, "INPUT_SAMPLE_MAP");
         }
-
 
         final List<CrosscheckMetric> metrics = new ArrayList<>();
         final int numUnexpected;
@@ -272,7 +271,7 @@ public class CrosscheckFingerprints extends CommandLineProgram {
             final Map<FingerprintIdDetails, Fingerprint> fpMap2 = checker.fingerprintFiles(unrolledFiles2, NUM_THREADS, 1, TimeUnit.DAYS);
 
             if (SECOND_INPUT_SAMPLE_MAP != null) {
-                remapFingerprints(fpMap2, SECOND_INPUT_SAMPLE_MAP);
+                remapFingerprints(fpMap2, SECOND_INPUT_SAMPLE_MAP, "SECOND_INPUT_SAMPLE_MAP");
             }
             switch (CROSSCHECK_MODE) {
                 case CHECK_SAME_SAMPLE:
@@ -315,7 +314,7 @@ public class CrosscheckFingerprints extends CommandLineProgram {
      * @param sampleMapFile
      */
 
-    private void remapFingerprints(final Map<FingerprintIdDetails, Fingerprint> fpMap, final File sampleMapFile) {
+    private void remapFingerprints(final Map<FingerprintIdDetails, Fingerprint> fpMap, final File sampleMapFile, final String inputFieldName) {
         final Map<String, String> sampleMap = new HashMap<>();
 
         TabbedInputParser parser = new TabbedInputParser(false, sampleMapFile);
@@ -323,30 +322,33 @@ public class CrosscheckFingerprints extends CommandLineProgram {
         // build the map
         for (final String[] strings : parser) {
             if (strings.length != 2) {
-                throw new IllegalArgumentException("Each line must have exactly two strings separated by a tab. " +
+                throw new IllegalArgumentException("Each line of the " + inputFieldName + " must have exactly two strings separated by a tab. " +
                         "Found: [" + String.join(",", Arrays.asList(strings)) +
-                        "] right before [" + parser.getCurrentLine() + "]");
+                        "] right before [" + parser.getCurrentLine() + "], in " + sampleMapFile.getAbsolutePath());
             }
             if (sampleMap.containsKey(strings[0])) {
-                throw new IllegalArgumentException("Strings in first column must be unique. found [" + strings[0] +
-                        "] twice. Right before [" + parser.getCurrentLine() + "]");
+                throw new IllegalArgumentException("Strings in first column of the " + inputFieldName + " must be unique. found [" + strings[0] +
+                        "] twice. Right before [" + parser.getCurrentLine() + "] in " + sampleMapFile.getAbsolutePath());
             }
             sampleMap.put(strings[0],strings[1]);
         }
-        // verify that every key in the sample map is a sample in the fpMap
+        // check that every key in the sample map is a sample in the fpMap, and warn otherwise
         final Set<String> samplesInFpMap = fpMap.keySet().stream().map(id->id.sample).collect(Collectors.toSet());
         final Set<String> samplesNotInSampleMap = sampleMap.keySet().stream()
                 .filter(((Predicate<String>)samplesInFpMap::contains).negate())
                 .collect(Collectors.toSet());
         if (!samplesNotInSampleMap.isEmpty()) {
-            throw new IllegalArgumentException("All samples in first column in sampleMap file must be present in the appropriate fingerprinted file. " +
-                    "Found samples in the the sample map that are not in the input file: [" + String.join(", ", samplesNotInSampleMap)+ "]");
+            log.warn("Some samples in first column in the " + inputFieldName + " were not present as samples in fingerprinted file: [" +
+                      String.join(", ", samplesNotInSampleMap)+ "].");
         }
 
         // verify that resulting sample-set is unique
         final List<String> resultingSamples = new ArrayList<>(samplesInFpMap);
-        resultingSamples.removeAll(sampleMap.keySet());
-        resultingSamples.addAll(sampleMap.values());
+        sampleMap.keySet().forEach(s->{
+            if(resultingSamples.remove(s)){
+                resultingSamples.add(sampleMap.get(s));
+            }
+        });
 
         if (CollectionUtil.makeSet(resultingSamples.toArray(new String[0])).size() != resultingSamples.size()) {
             final Set<String> duplicates = new HashSet<>();
@@ -355,8 +357,9 @@ public class CrosscheckFingerprints extends CommandLineProgram {
                 if (unique.add(s))
                     duplicates.add(s);
             });
-            throw new IllegalArgumentException("Resulting sample names must be unique when taken together with the remaining unmapped samples. " +
-                    "Duplicates are: [" + String.join(",", duplicates) + "].");
+            throw new IllegalArgumentException("After applying the mapping found in the " + inputFieldName + " the resulting " +
+                    "sample names must be unique when taken together with the remaining unmapped samples. " +
+                    "Duplicates are: [" + String.join(",", duplicates) + "], " + inputFieldName);
         }
 
         // replace samples with their mapped values:

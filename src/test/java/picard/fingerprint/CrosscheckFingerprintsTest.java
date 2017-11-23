@@ -413,7 +413,11 @@ public class CrosscheckFingerprintsTest {
         List<Object[]> tests = new ArrayList<>();
 
         File NA12892_to_NA12891 = new File(TEST_DATA_DIR,"NA12892_to_NA12891.txt");
+        File NotThere_to_NA12892 = new File(TEST_DATA_DIR,"NotThere_to_NA12891.txt");
 
+        tests.add(new Object[]{Arrays.asList( NA12892_r1), Arrays.asList(NA12891_r2, NA12892_r2), NotThere_to_NA12892, null, 0, 1, 2, false});
+        tests.add(new Object[]{Arrays.asList( NA12892_r1), Arrays.asList(NA12891_r2, NA12892_r2), null, NotThere_to_NA12892, 0, 1, 2, false});
+        tests.add(new Object[]{Arrays.asList( NA12892_r1), Arrays.asList(NA12891_r2, NA12892_r2), NotThere_to_NA12892, NotThere_to_NA12892, 0, 1, 2, false});
         tests.add(new Object[]{Arrays.asList(NA12891_1_vcf, NA12892_1_vcf), Collections.singletonList(NA12892_g_vcf), null, null, 0, 2, 1, false});
         tests.add(new Object[]{Arrays.asList(NA12891_1_vcf, NA12892_1_vcf), Collections.singletonList(NA12892_g_vcf), null, NA12892_to_NA12891, 1, 2, 1, false});
         tests.add(new Object[]{Collections.singletonList(NA12892_1_vcf), Collections.singletonList(NA12892_g_vcf), NA12892_to_NA12891, NA12892_to_NA12891, 0, 1, 1, false});
@@ -451,20 +455,16 @@ public class CrosscheckFingerprintsTest {
 
         File NA12892_to_NA12891 = new File(TEST_DATA_DIR,"NA12892_to_NA12891.txt");
         File NA12891_to_NA12892 = new File(TEST_DATA_DIR,"NA12891_to_NA12892.txt");
-        File NotThere_to_NA12892 = new File(TEST_DATA_DIR,"NotThere_to_NA12891.txt");
         File tooManyFields = new File(TEST_DATA_DIR,"too_many_fields.txt");
         File tooFewFields = new File(TEST_DATA_DIR,"too_few_fields.txt");
         File duplicateKey = new File(TEST_DATA_DIR,"DuplicateKey.txt");
 
         tests.add(new Object[]{NA12891_to_NA12892, null});// NA12892 will become non-unique in first file
-        tests.add(new Object[]{NA12892_to_NA12891, null});// NotThere is not one of the samples
-        tests.add(new Object[]{NotThere_to_NA12892, null});// NotThere is not one of the samples
+        tests.add(new Object[]{NA12892_to_NA12891, null});// NA12891 will become non-unique in first file
         tests.add(new Object[]{tooManyFields, null});// file too_many_fields.txt has too many fields
         tests.add(new Object[]{tooFewFields, null});// file too_few_fields.txt has too few fields
         tests.add(new Object[]{duplicateKey, null});// file too_few_fields.txt has too few fields
 
-        tests.add(new Object[]{null, NA12891_to_NA12892});// NA12891 is not present in second file
-        tests.add(new Object[]{null, NotThere_to_NA12892});// NotThere is not one of the samples
         tests.add(new Object[]{null, tooManyFields});// file too_many_fields.txt has too many fields
         tests.add(new Object[]{null, tooFewFields});// file too_few_fields.txt has too few fields
         tests.add(new Object[]{null, duplicateKey});// file DuplicateKey.txt has a duplicate key
@@ -496,8 +496,6 @@ public class CrosscheckFingerprintsTest {
 
         doTest(args.toArray(new String[args.size()]), metrics, 0, 0 , CrosscheckMetric.DataType.SAMPLE, false);
     }
-
-
 
 
     @Test(dataProvider = "checkSamplesCrosscheckAllData")
