@@ -864,30 +864,4 @@ public class FingerprintChecker {
     public static MatchResults calculateMatchResults(final Fingerprint observedFp, final Fingerprint expectedFp) {
         return calculateMatchResults(observedFp, expectedFp, 0, 0);
     }
-
-    static boolean isQueryable(final File vcf) {
-        if (!vcf.isFile()) return false;
-
-        try (final VCFFileReader reader = new VCFFileReader(vcf, false)) {
-            reader.query(reader.getFileHeader().getSequenceDictionary().getSequence(0).getSequenceName(), 1, 1);
-        } catch (final TribbleException e) {
-            return false;
-        }
-        return true;
-    }
-
-    static boolean isQueryable(final Path vcf) {
-        try {
-            if (!vcf.toFile().isFile()) return false;
-        } catch (UnsupportedOperationException e) {
-            //noop
-        }
-        try (final VCFPathReader reader = new VCFPathReader(vcf, false)) {
-            reader.query(reader.getFileHeader().getSequenceDictionary().getSequence(0).getSequenceName(), 1, 1);
-        } catch (final TribbleException e) {
-            return false;
-        }
-        return true;
-    }
-
 }
