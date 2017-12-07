@@ -1,13 +1,16 @@
 package picard.cmdline.programgroups;
 
 import org.broadinstitute.barclay.argparser.CommandLineProgramGroup;
+import picard.util.help.HelpConstants;
 
 /**
-* @author nhomer
+ * Tools that process genomic intervals in various formats.
+ *
+ * @author nhomer
 */
 public class Intervals implements CommandLineProgramGroup {
     @Override
-    public String getName() { return "Interval Tools"; }
+    public String getName() { return HelpConstants.DOC_CAT_INTERVALS ; }
     @Override
-    public String getDescription() { return "Tools for manipulating Picard interval lists."; }
+    public String getDescription() { return HelpConstants.DOC_CAT_INTERVALS_SUMMARY; }
 }
