@@ -100,6 +100,12 @@ public class HsMetrics extends MultilevelMetrics {
     /** The number of PF_BASES_ALIGNED that are mapped away from any baited region. */
     public long OFF_BAIT_BASES;
 
+    /** The number of usable reads that mapped to a targeted region of the genome. */
+    public long ON_TARGET_READS;
+
+    /** The faction of usable targeted reads, ON_TARGET_READS/TOTAL_READS. */
+    public double PCT_TARGET_READS;
+
     /** The number of PF_BASES_ALIGNED that are mapped to a targeted region of the genome. */
     public long ON_TARGET_BASES;
 

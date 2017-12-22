@@ -546,6 +546,8 @@ public abstract class TargetMetricsCollector<METRIC_TYPE extends MultilevelMetri
                 rec = record;
             }
 
+
+			boolean isReadOnTarget = false;
             // Find the target overlaps
             final Set<Interval> coveredTargets = new HashSet<>();
             for (final AlignmentBlock block : rec.getAlignmentBlocks()) {
@@ -598,9 +600,12 @@ public abstract class TargetMetricsCollector<METRIC_TYPE extends MultilevelMetri
 
                     // a base must not be on target and its base quality must exceed minimumBaseQuality for us to increment PCT_EXC_OFF_TARGET
                     if (!isOnTarget) this.metrics.PCT_EXC_OFF_TARGET++;
-
+					// Only one base needs to be on target for the whole read to be considered on target
+					if (isOnTarget) isReadOnTarget = true;
                 }
             }
+			// At least one base was on target in this read
+			if(isReadOnTarget) this.metrics.ON_TARGET_READS++;
         }
 
         @Override
@@ -608,6 +613,7 @@ public abstract class TargetMetricsCollector<METRIC_TYPE extends MultilevelMetri
             metrics.PCT_PF_READS            = metrics.PF_READS / (double) metrics.TOTAL_READS;
             metrics.PCT_PF_UQ_READS         = metrics.PF_UNIQUE_READS / (double) metrics.TOTAL_READS;
             metrics.PCT_PF_UQ_READS_ALIGNED = metrics.PF_UQ_READS_ALIGNED / (double) metrics.PF_UNIQUE_READS;
+			metrics.PCT_TARGET_READS 		= metrics.ON_TARGET_READS / (double) metrics.TOTAL_READS;
 
             final double denominator        = metrics.ON_PROBE_BASES + metrics.NEAR_PROBE_BASES + metrics.OFF_PROBE_BASES;
 
@@ -983,7 +989,13 @@ class TargetMetrics extends MultilevelMetrics {
     /** The number of PF aligned bases that are mapped in pair to a targeted region of the genome. */
     public long ON_TARGET_FROM_PAIR_BASES;
 
+    /** The number of usable reads that mapped to a targeted region of the genome. */
+    public long ON_TARGET_READS;
+
     //metrics below here are derived after collection
+
+    /** The faction of usable targeted reads, ON_TARGET_READS/TOTAL_READS. */
+    public double PCT_TARGET_READS;
 
     /** The fraction of reads passing filter, PF_READS/TOTAL_READS.   */
     public double PCT_PF_READS;
